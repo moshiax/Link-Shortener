@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -7,105 +6,206 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap">
   <style>
     body {
-      background-color: black;
+      background-color: #000000;
       font-family: 'Roboto Mono', monospace;
-      color: white;
+      color: #E0E0E0;
       text-align: center;
       display: flex;
       flex-direction: column;
       justify-content: center;
+      align-items: center;
       min-height: 100vh;
       margin: 0;
     }
 
-    label, input[type="number"] {
-      color: grey;
+    h1 {
+      font-size: 2rem;
+      color: #FFFFFF;
+      margin-bottom: 30px;
     }
 
-    input[type="checkbox"],
+    label {
+      display: block;
+      font-size: 1rem;
+      color: #B0B0B0;
+      margin-bottom: 8px;
+      text-align: left;
+      width: 80%;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    input[type="url"], input[type="number"], button {
+      background-color: #333333;
+      color: #E0E0E0;
+      border: 1px solid #444444;
+      padding: 10px;
+      font-size: 1rem;
+      width: 80%;
+      margin: 8px 0;
+      border-radius: 5px;
+      box-sizing: border-box;
+      outline: none;
+      transition: border 0.3s ease;
+    }
+
+    input[type="url"]:focus, input[type="number"]:focus {
+      border-color: #FF5722;
+    }
+
     button {
-      background-color: grey;
+      background-color: #a13513;
       color: white;
       border: none;
-      padding: 5px 10px;
+      padding: 12px 30px;
+      font-size: 1.1rem;
+      margin-top: 20px;
       cursor: pointer;
       border-radius: 5px;
+      transition: background-color 0.3s ease;
     }
 
-    input[type="checkbox"]:checked {
-      background-color: black;
-    }
-
-    input[type="url"] {
-      background-color: grey;
-      color: white;
-      border: 1px solid grey;
-      padding: 5px;
+    button:hover {
+      background-color: #E64A19;
     }
 
     p {
-      color: white;
+      color: #FFFFFF;
       margin-top: 20px;
     }
 
     a {
-      color: white;
+      color: #FF5722;
       text-decoration: underline;
+      font-weight: bold;
     }
 
     a:hover {
       text-decoration: none;
     }
 
-  
+    .btn41-43 {
+      margin-top: 30px;
+      padding: 10px 25px;
+      font-family: "Roboto", sans-serif;
+      font-weight: 500;
+      background: transparent;
+      outline: none !important;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      display: inline-block;
+    }
+
+    .btn-42 {
+      border: 2px solid rgb(255, 255, 255);
+      z-index: 1;
+      color: white;
+    }
+
+    .btn-42:after {
+      position: absolute;
+      content: "";
+      width: 100%;
+      height: 0;
+      bottom: 0;
+      left: 0;
+      z-index: -1;
+      background: rgb(255, 255, 255);
+      transition: all 0.3s ease;
+    }
+
+    .btn-42:hover {
+      color: rgb(0, 0, 0);
+    }
+
+    .btn-42:hover:after {
+      top: 0;
+      height: 100%;
+    }
+
+    .btn-42:active {
+      top: 2px;
+    }
+
+    input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      appearance: none;
+      background-color: #333;
+      border: 2px solid #444;
+      border-radius: 5px;
+      position: relative;
+      cursor: pointer;
+      transition: background-color 0.3s, border 0.3s;
+    }
+
+    input[type="checkbox"]:checked {
+      background-color: #FF5722;
+      border-color: #FF5722;
+    }
+
+    input[type="checkbox"]:checked::after {
+      content: '';
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      width: 12px;
+      height: 12px;
+      background-color: white;
+      border-radius: 3px;
+    }
+
+    input[type="checkbox"]:hover {
+      border-color: #FF5722;
+    }
+
     @media (min-width: 768px) {
       body {
         font-size: 24px; 
       }
     }
-
-    .btn41-43 {
-  margin-top: 30px;
-  padding: 10px 25px;
-  font-family: "Roboto", sans-serif;
-  font-weight: 500;
-  background: transparent;
-  outline: none !important;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
-  display: inline-block;
+	
+  #result {
+    max-width: 70vw;
+    overflow-wrap: break-word;  
+    word-wrap: break-word; 
+  }
+  @keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px)
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0)
+  }
 }
-
-.btn-42 {
-  border: 2px solid rgb(255, 255, 255);
-  z-index: 1;
-  color: white;
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0)
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px)
+  }
 }
-
-.btn-42:after {
-  position: absolute;
-  content: "";
-  width: 100%;
-  height: 0;
-  bottom: 0;
-  left: 0;
-  z-index: -1;
-  background: rgb(255, 255, 255);
-  transition: all 0.3s ease;
-}
-
-.btn-42:hover {
-  color: rgb(0, 0, 0);
-}
-
-.btn-42:hover:after {
-  top: 0;
-  height: 100%;
-}
-
-.btn-42:active {
-  top: 2px;
+  .notification {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 20px;
+  background-color: rgba(0,0,0,.8);
+  color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 0 15px rgba(0,0,0,.5);
+  font-size: 1.5rem;
+  text-align: center;
+  z-index: 10000000;
+  animation: fadeIn .5s ease-in-out,fadeOut .5s ease-in-out 1s
 }
   </style>
 </head>
@@ -114,7 +214,9 @@
   <form>
     <label for="originalUrl">Enter the URL:</label>
     <input type="url" id="originalUrl" required><br>
-
+	<div id="notification" class="notification">
+		<p></p>
+	</div>
     <label for="randomString">Add random string at the start:</label>
     <input type="checkbox" id="randomString"><br>
 
@@ -128,23 +230,52 @@
   </form>
 
   <p id="result"></p>
+  <button id="copyButton" style="display:none; max-width: 30%; width: 100%;">Copy URL</button>
 
   <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('service-worker.js')
-                .then((registration) => {
-                    console.log('Service Worker registered with scope:', registration.scope);
-                })
-                .catch((error) => {
-                    console.log('Service Worker registration failed:', error);
-                });
-        }
     document.addEventListener("DOMContentLoaded", function () {
       const button = document.getElementById("shadifyButton");
-      button.addEventListener("click", function() {
-        generateShadyUrl();
+      button.addEventListener("click", generateShadyUrl);
+
+      const copyButton = document.getElementById("copyButton");
+      copyButton.addEventListener("click", function () {
+        const resultText = document.getElementById("result").innerText;
+        const textArea = document.createElement("textarea");
+        textArea.value = resultText;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+        showNotification("URL copied to clipboard!");
       });
     });
+
+    function showNotification(message) {
+      let formattedMessage = message.replace(/\n/g, '<br>').replace(/\[(H|P|N|Q)\]/g, match => 
+        `<span class="notification-key" data-key="${match}">${match}</span>`
+      );
+
+      const discountPercentMatch = message.match(/Discount percent is (\d+)%/);
+      if (discountPercentMatch) {
+        const discountPercent = discountPercentMatch[1];
+        formattedMessage = formattedMessage.replace(
+          `Discount percent is ${discountPercent}%`, 
+          `<span class="discount-highlight">Discount percent is <b>${discountPercent}%</b></span>`
+        );
+      }
+
+      const notification = document.getElementById('notification');
+      notification.querySelector('p').innerHTML = formattedMessage;
+      notification.style.display = 'block';
+      notification.style.animation = 'fadeIn 0.5s ease-in-out';
+
+      setTimeout(() => {
+        notification.style.animation = 'fadeOut 0.5s ease-in-out';
+        setTimeout(() => {
+          notification.style.display = 'none';
+        }, 500);
+      }, 2300);
+    }
 
     function getRandomShadyWord() {
       const shadyWords = {
@@ -161,13 +292,13 @@
         "28": "Free", "35": "Masturbation", "42": "Adware", "29": "Blowjob", "36": "Genital",
         "43": "Ransom", "50": "DDoS", "37": "Rape", "44": "Backdoor", "51": "Firewall",
         "38": "Love", "45": "Bitcoin", "52": "Hack", "60": "Spy", "39": "Ass", "46": "Bot",
-	    "100": "Bitch", "101": "Slut", "102": "Cunt", "103": "Asshole", "104": "Dickhead",
-	    "105": "Fucker", "106": "Whore", "107": "Prick", "108": "Douche", "109": "Shithead",
-	    "110": "Piss", "111": "Twat", "112": "Fag", "113": "Twink", "114": "Cum",
-	    "115": "Nipple", "116": "Cocksucker", "117": "Jizz", "118": "Bastard", "119": "Fuckhead",
-	    "120": "Clit", "121": "Minge", "122": "Pussy", "123": "Turd", "124": "Scrotum",
-	    "125": "Titsucker", "126": "Ballbag", "127": "Fisting", "128": "Blowjobber", "129": "Pisshead",
-	    "130": "Rimming", "131": "Smegma", "132": "Fistfuck", "133": "Fucktard", "134": "Cockblock"
+        "100": "Bitch", "101": "Slut", "102": "Cunt", "103": "Asshole", "104": "Dickhead",
+        "105": "Fucker", "106": "Whore", "107": "Prick", "108": "Douche", "109": "Shithead",
+        "110": "Piss", "111": "Twat", "112": "Fag", "113": "Twink", "114": "Cum",
+        "115": "Nipple", "116": "Cocksucker", "117": "Jizz", "118": "Bastard", "119": "Fuckhead",
+        "120": "Clit", "121": "Minge", "122": "Pussy", "123": "Turd", "124": "Scrotum",
+        "125": "Titsucker", "126": "Ballbag", "127": "Fisting", "128": "Blowjobber", "129": "Pisshead",
+        "130": "Rimming", "131": "Smegma", "132": "Fistfuck", "133": "Fucktard", "134": "Cockblock"
       };
 
       const keys = Object.keys(shadyWords);
@@ -187,60 +318,64 @@
       return fileExtensions[randomKey];
     }
 
+    function generateShadyUrl() {
+      const originalUrl = document.getElementById('originalUrl').value;
+      const randomString = document.getElementById('randomString').checked;
+      const fileExtension = document.getElementById('fileExtension').checked;
+      let numberOfWords = document.getElementById('numberOfWords').value;
 
-function generateShadyUrl() {
-  const originalUrl = document.getElementById('originalUrl').value;
-  const randomString = document.getElementById('randomString').checked;
-  const fileExtension = document.getElementById('fileExtension').checked;
-  let numberOfWords = document.getElementById('numberOfWords').value;
+      numberOfWords = numberOfWords / 2;
+      let shadyUrl = "";
+      let newUrl = "";
+      let overflowUrl = "";
 
-  numberOfWords = numberOfWords / 2;
-  let shadyUrl = "";
+      if (randomString) {
+        let randomNumbers = Math.floor(Math.random() * 100000000);
+        shadyUrl += `${randomNumbers}_`;
+      }
 
-  if (randomString) {
-    let randomNumbers = Math.floor(Math.random() * 100000000);
-    shadyUrl += `${randomNumbers}_`;
-  }
+      for (let i = 0; i < numberOfWords; i++) {
+        const word = getRandomShadyWord();
+        const newWord = getRandomShadyWord();
 
-  let overflowUrl = '';
-  let newurl = '';
-  for (let i = 0; i < numberOfWords; i++) {
-    const word = getRandomShadyWord();
-    const newword = getRandomShadyWord();
-    if (shadyUrl.length + word.length + 1 <= 30) {
-      shadyUrl += `${word}_`;
-      newurl += `${newword}_`;
-    } else {
-      overflowUrl += `_${word}`;
+        if (shadyUrl.length + word.length + 1 <= 30) {
+          shadyUrl += `${word}_`;
+          newUrl += `${newWord}_`;
+        } else {
+          overflowUrl += `_${word}`;
+        }
+      }
+
+      shadyUrl = shadyUrl.replace(/_$/, '');
+
+      if (fileExtension) {
+        const extension = getRandomFileExtension();
+        shadyUrl += `_${extension}`;
+      }
+
+      while (shadyUrl.length > 30) {
+        const shadyUrlParts = shadyUrl.split('_');
+        shadyUrl = shadyUrlParts.slice(0, -1).join('_');
+      }
+
+      const isgdAPI = 'https://is.gd/create.php';
+      const params = new URLSearchParams();
+      params.append('format', 'simple');
+      params.append('url', originalUrl);
+      params.append('shorturl', `_${shadyUrl}`);
+
+      fetch(`${isgdAPI}?${params.toString()}`, { mode: 'no-cors' })
+        .then(() => {
+          const resultElement = document.getElementById('result');
+          const username = overflowUrl ? `#${overflowUrl}` : '';
+          resultElement.innerHTML = `<a href="https://${newUrl}@is.gd/_${shadyUrl}${username}" target="_blank">https://${newUrl}@is.gd/_${shadyUrl}${username}</a>`;
+          document.getElementById("copyButton").style.display = 'inline-block';
+        })
+        .catch(error => {
+          console.error('Error:', error);
+        });
     }
-  }
-
-  if (fileExtension) {
-    const extension = getRandomFileExtension();
-    if (overflowUrl.length < 2) {
-      shadyUrl += extension;
-    } else {
-      overflowUrl += '.' + extension;
-    }
-  }
-
-  const isgdAPI = 'https://is.gd/create.php';
-  const params = new URLSearchParams();
-  params.append('format', 'simple');
-  params.append('url', originalUrl);
-  params.append('shorturl', `_${shadyUrl}`);
-
-  fetch(`${isgdAPI}?${params.toString()}`, { mode: 'no-cors' })
-    .then(() => {
-      const resultElement = document.getElementById('result');
-      const username = overflowUrl ? `#${overflowUrl}` : '';
-      resultElement.innerHTML = `Your shady URL: <br>https://${newurl}@is.gd/_${shadyUrl}${username}`;
-    })
-    .catch(error => {
-      console.error('Error:', error);
-    });
-}
-
   </script>
+
 </body>
 </html>
