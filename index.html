@@ -292,7 +292,20 @@
 	  ];
 
 	  const randomIndex = Math.floor(Math.random() * shadyWords.length);
-	  return shadyWords[randomIndex];
+	  let word = shadyWords[randomIndex];
+
+	  if (Math.random() < 0.05) {
+		word = word.toUpperCase();
+	  } else if (Math.random() < 0.05) {
+		word = word.toLowerCase();
+	  } else if (Math.random() < 0.10) {
+		word = word.split('').map(char => Math.random() < 0.15 ? char.toUpperCase() : char).join('');
+	  } else if (Math.random() < 0.05) {
+		const replaceDict = { 'a': '4', 'o': '0', 'i': '1', 'e': '3', 's': '5' };
+		word = word.split('').map(char => replaceDict[char] || char).join('');
+	  }
+
+	  return word;
 	}
 
     function getRandomFileExtension() {
@@ -306,64 +319,70 @@
       const randomKey = keys[Math.floor(Math.random() * keys.length)];
       return fileExtensions[randomKey];
     }
+	function generateShadyUrl() {
+	  let originalUrl = document.getElementById('originalUrl').value;
 
-    function generateShadyUrl() {
-      const originalUrl = document.getElementById('originalUrl').value;
-      const randomString = document.getElementById('randomString').checked;
-      const fileExtension = document.getElementById('fileExtension').checked;
-      let numberOfWords = document.getElementById('numberOfWords').value;
+	  if (originalUrl.length > 30) {
+		originalUrl = originalUrl.substring(0, 30);
+	  }
 
-      numberOfWords = numberOfWords / 2;
-      let shadyUrl = "";
-      let newUrl = "";
-      let overflowUrl = "";
+	  const randomString = document.getElementById('randomString').checked;
+	  const fileExtension = document.getElementById('fileExtension').checked;
+	  let numberOfWords = document.getElementById('numberOfWords').value;
 
-      if (randomString) {
-        let randomNumbers = Math.floor(Math.random() * 100000000);
-        shadyUrl += `${randomNumbers}_`;
-      }
+	  numberOfWords = numberOfWords / 2;
+	  let shadyUrl = "";
+	  let newUrl = "";
+	  let overflowUrl = "";
 
-      for (let i = 0; i < numberOfWords; i++) {
-        const word = getRandomShadyWord();
-        const newWord = getRandomShadyWord();
+	  if (randomString) {
+		let randomNumbers = Math.floor(Math.random() * 100000000);
+		shadyUrl += `${randomNumbers}_`;
+	  }
 
-        if (shadyUrl.length + word.length + 1 <= 30) {
-          shadyUrl += `${word}_`;
-          newUrl += `${newWord}_`;
-        } else {
-          overflowUrl += `_${word}`;
-        }
-      }
+	  for (let i = 0; i < numberOfWords; i++) {
+		const word = getRandomShadyWord();
+		const newWord = getRandomShadyWord();
 
-      shadyUrl = shadyUrl.replace(/_$/, '');
+		if (shadyUrl.length + word.length + 1 <= 30) {
+		  shadyUrl += `${word}_`;
+		  newUrl += `${newWord}_`;
+		} else {
+		  overflowUrl += `_${word}`;
+		}
+	  }
 
-      if (fileExtension) {
-        const extension = getRandomFileExtension();
-        shadyUrl += `_${extension}`;
-      }
+	  shadyUrl = shadyUrl.replace(/_$/, '');
 
-      while (shadyUrl.length > 30) {
-        const shadyUrlParts = shadyUrl.split('_');
-        shadyUrl = shadyUrlParts.slice(0, -1).join('_');
-      }
+	  if (fileExtension) {
+		const extension = getRandomFileExtension();
+		shadyUrl += `_${extension}`;
+	  }
 
-      const isgdAPI = 'https://is.gd/create.php';
-      const params = new URLSearchParams();
-      params.append('format', 'simple');
-      params.append('url', originalUrl);
-      params.append('shorturl', `_${shadyUrl}`);
+	  while (shadyUrl.length > 29) {
+		const shadyUrlParts = shadyUrl.split('_');
+		shadyUrl = shadyUrlParts.slice(0, -1).join('_');
+	  }
 
-      fetch(`${isgdAPI}?${params.toString()}`, { mode: 'no-cors' })
-        .then(() => {
-          const resultElement = document.getElementById('result');
-          const username = overflowUrl ? `#${overflowUrl}` : '';
-          resultElement.innerHTML = `<a href="https://${newUrl}@is.gd/_${shadyUrl}${username}" target="_blank">https://${newUrl}@is.gd/_${shadyUrl}${username}</a>`;
-          document.getElementById("copyButton").style.display = 'inline-block';
-        })
-        .catch(error => {
-          console.error('Error:', error);
-        });
-    }
+	  const isgdAPI = 'https://is.gd/create.php';
+	  const params = new URLSearchParams();
+	  params.append('format', 'simple');
+	  params.append('url', originalUrl);
+	  params.append('shorturl', `_${shadyUrl}`);
+
+	  fetch(`${isgdAPI}?${params.toString()}`, { mode: 'no-cors' })
+		.then(response => response.text())
+		.then(() => {
+		  const resultElement = document.getElementById('result');
+		  const username = overflowUrl ? `#${overflowUrl}` : '';
+		  resultElement.innerHTML = `<a href="https://${newUrl}@is.gd/_${shadyUrl}${username}" target="_blank">https://${newUrl}@is.gd/_${shadyUrl}${username}</a>`;
+		  document.getElementById("copyButton").style.display = 'inline-block';
+		})
+		.catch(error => {
+		  console.error('Error:', error);
+		});
+	}
+
   </script>
 
 </body>
