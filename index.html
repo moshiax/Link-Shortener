@@ -294,19 +294,25 @@
 	  const randomIndex = Math.floor(Math.random() * shadyWords.length);
 	  let word = shadyWords[randomIndex];
 
-	  if (Math.random() < 0.05) {
+	  if (Math.random() < 0.2) {
 		word = word.toUpperCase();
-	  } else if (Math.random() < 0.05) {
+	  } else if (Math.random() < 0.2) {
 		word = word.toLowerCase();
-	  } else if (Math.random() < 0.10) {
-		word = word.split('').map(char => Math.random() < 0.15 ? char.toUpperCase() : char).join('');
-	  } else if (Math.random() < 0.05) {
+	  } else if (Math.random() < 0.4) {
+		word = word.split('').map(char => Math.random() < 0.25 ? char.toUpperCase() : char).join('');
+	  } else if (Math.random() < 0.2) {
 		const replaceDict = { 'a': '4', 'o': '0', 'i': '1', 'e': '3', 's': '5' };
 		word = word.split('').map(char => replaceDict[char] || char).join('');
+	  } else if (Math.random() < 0.25) {
+		word = word.split('').map(char => {
+		  const replaceChars = { 'a': '4', 'o': '0', 'i': '1', 'e': '3', 's': '5', 't': '7', 'l': '1' };
+		  return Math.random() < 0.1 ? replaceChars[char] || char : char;
+		}).join('');
 	  }
 
 	  return word;
 	}
+
 
     function getRandomFileExtension() {
       const fileExtensions = {
@@ -319,13 +325,9 @@
       const randomKey = keys[Math.floor(Math.random() * keys.length)];
       return fileExtensions[randomKey];
     }
+	
 	function generateShadyUrl() {
 	  let originalUrl = document.getElementById('originalUrl').value;
-
-	  if (originalUrl.length > 30) {
-		originalUrl = originalUrl.substring(0, 30);
-	  }
-
 	  const randomString = document.getElementById('randomString').checked;
 	  const fileExtension = document.getElementById('fileExtension').checked;
 	  let numberOfWords = document.getElementById('numberOfWords').value;
