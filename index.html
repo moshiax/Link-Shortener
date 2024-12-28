@@ -4,7 +4,6 @@
 <head>
   <title>Shady URL </title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="manifest" href="manifest.json"> 
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap">
   <style>
     body {
@@ -225,7 +224,7 @@ function generateShadyUrl() {
     }
   }
 
-  const isgdAPI = 'http://is.gd/create.php';
+  const isgdAPI = 'https://is.gd/create.php';
   const params = new URLSearchParams();
   params.append('format', 'simple');
   params.append('url', originalUrl);
