@@ -371,14 +371,14 @@
 		const params = new URLSearchParams();
 		params.append('format', 'simple');
 		params.append('url', originalUrl);
-		params.append('shorturl', `_${shadyUrl}`);
+		params.append('shorturl', shadyUrl);
 
 		fetch(`${isgdAPI}?${params.toString()}`, { mode: 'no-cors' })
 			.then(response => response.text())
 			.then(() => {
 				const resultElement = document.getElementById('result');
 				const username = overflowUrl ? `#${overflowUrl}` : '';
-				resultElement.innerHTML = `<a href="https://${newUrl}@is.gd/_${shadyUrl}${username}" target="_blank">https://${newUrl}@is.gd/_${shadyUrl}${username}</a>`;
+				resultElement.innerHTML = `<a href="https://${newUrl}@is.gd/${shadyUrl}${username}" target="_blank">https://${newUrl}@is.gd/${shadyUrl}${username}</a>`;
 				document.getElementById("copyButton").style.display = 'inline-block';
 			})
 			.catch(error => {
