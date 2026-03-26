@@ -18,9 +18,38 @@ button:hover { background:#0056b3; }
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
 input[type=number] { -moz-appearance: textfield; }
+body {
+  background-color: #000000;
+  font-family: 'Roboto Mono', monospace;
+  color: #E0E0E0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+}
+#decryptCircle circle {
+  transition: stroke 0.1s linear;
+}
 </style>
 </head>
 <body>
+<div id="decryptUI" style="
+	display:none;
+	position:fixed; top:0; left:0; width:100vw; height:100vh;
+	background:#000;
+	justify-content:center; align-items:center; flex-direction:column;
+	color:#fff;
+	font-family:'Roboto Mono', monospace;
+">
+	<svg id="decryptCircle" viewBox="0 0 150 150" style="width:30vmin; height:30vmin;">
+		<circle cx="75" cy="75" r="70" stroke="#444" stroke-width="10" fill="none"/>
+	</svg>
+	<div id="layersLeft" style="position:absolute; font-size:6vmin; font-weight:bold;">0</div>
+</div>
+
 <div id="ui">
   <input type="text" id="url" placeholder="URL">
   <input type="number" id="depth" min="1" max="4294967295" placeholder="Recursion depth" style="width:auto; margin-left:5px;">
@@ -29,29 +58,41 @@ input[type=number] { -moz-appearance: textfield; }
   <div id="progressContainer"><div id="progressBar"></div></div>
   <p id="short"></p>
   <p id="info"></p>
+  <p id="details" style="font-size:12px; color:#aaa; margin-top:5px;"></p>
 </div>
 
 <script>
-const chars="0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+let stopRequested = false;
+
+function resetUI() {
+	document.getElementById('short').innerHTML = '';
+	document.getElementById('info').textContent = '';
+	document.getElementById('details').textContent = '';
+	const progressContainer = document.getElementById('progressContainer');
+	progressContainer.style.display = 'none';
+	document.getElementById('progressBar').style.width = '0%';
+}
+
+const chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 function toBase62(bytes){
-	let num=BigInt('0x'+[1,...bytes].map(b=>b.toString(16).padStart(2,'0')).join('')),s='';
-	while(num>0n){s=chars[num%62n]+s;num/=62n;}
-	return s||chars[0];
+	let num = BigInt('0x' + [1,...bytes].map(b=>b.toString(16).padStart(2,'0')).join('')), s = '';
+	while(num > 0n){ s = chars[num % 62n] + s; num /= 62n; }
+	return s || chars[0];
 }
 
 function fromBase62Tagged(str){
-	let num=0n;
-	for(let c of str) num=num*62n+BigInt(chars.indexOf(c));
-	let hex=num.toString(16); if(hex.length%2) hex='0'+hex;
+	let num = 0n;
+	for(let c of str) num = num * 62n + BigInt(chars.indexOf(c));
+	let hex = num.toString(16); if(hex.length % 2) hex = '0' + hex;
 	const decoded = new Uint8Array(hex.match(/.{1,2}/g).map(b=>parseInt(b,16)));
 	return decoded.slice(1);
 }
 
 function packPayload(depth,data){
-	const payload = new Uint8Array(4+data.length);
-	new DataView(payload.buffer).setUint32(0,depth);
-	payload.set(data,4);
+	const payload = new Uint8Array(4 + data.length);
+	new DataView(payload.buffer).setUint32(0, depth);
+	payload.set(data, 4);
 	return payload;
 }
 
@@ -62,69 +103,112 @@ function unpackPayload(payload){
 
 function copyUrl(el){
 	navigator.clipboard.writeText(el.textContent).then(()=>{
-		const t=el.textContent; el.textContent="Copied!"; setTimeout(()=>el.textContent=t,1500);
+		const t = el.textContent; el.textContent = "Copied!"; setTimeout(()=>el.textContent = t, 1500);
 	});
 }
 
 async function deriveKey(layer){
-	const enc=new TextEncoder();
-	const keyMaterial=await crypto.subtle.importKey("raw",enc.encode(0xe2f),{name:"PBKDF2"},false,["deriveBits"]);
-	const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt:enc.encode("salt"+layer),iterations:50000,hash:"SHA-256"},keyMaterial,256);
+	const enc = new TextEncoder();
+	const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(0xe2f), {name:"PBKDF2"}, false, ["deriveBits"]);
+	const bits = await crypto.subtle.deriveBits({name:"PBKDF2", salt: enc.encode("salt"+layer), iterations:50000, hash:"SHA-256"}, keyMaterial, 256);
 	return new Uint8Array(bits);
 }
 
 async function aesCtrEncrypt(data,key,layer){
-	const k=await crypto.subtle.importKey('raw',key,'AES-CTR',false,['encrypt']);
-	const counter=new Uint8Array(16); new DataView(counter.buffer).setUint32(12,layer);
-	return new Uint8Array(await crypto.subtle.encrypt({name:'AES-CTR',counter,length:64},k,data));
+	const k = await crypto.subtle.importKey('raw', key, 'AES-CTR', false, ['encrypt']);
+	const counter = new Uint8Array(16); new DataView(counter.buffer).setUint32(12, layer);
+	return new Uint8Array(await crypto.subtle.encrypt({name:'AES-CTR', counter, length:64}, k, data));
 }
 
 async function aesCtrDecrypt(data,key,layer){
-	const k=await crypto.subtle.importKey('raw',key,'AES-CTR',false,['decrypt']);
-	const counter=new Uint8Array(16); new DataView(counter.buffer).setUint32(12,layer);
-	return new Uint8Array(await crypto.subtle.decrypt({name:'AES-CTR',counter,length:64},k,data));
+	const k = await crypto.subtle.importKey('raw', key, 'AES-CTR', false, ['decrypt']);
+	const counter = new Uint8Array(16); new DataView(counter.buffer).setUint32(12, layer);
+	return new Uint8Array(await crypto.subtle.decrypt({name:'AES-CTR', counter, length:64}, k, data));
 }
 
 async function mask(depth=1){
-	const url=document.getElementById("url").value.trim();
-	if(!url) return;
-	let data=new TextEncoder().encode(url);
-	const progressBar=document.getElementById('progressBar');
-	document.getElementById('progressContainer').style.display='block';
+	stopRequested = false;
+	resetUI();
 
-	for(let i=1;i<=depth;i++){
-		const key=await deriveKey(i);
-		data=await aesCtrEncrypt(data,key,i);
-		progressBar.style.width=((i/depth)*100).toFixed(2)+'%';
-		await new Promise(r=>setTimeout(r,50));
+	const url = document.getElementById("url").value.trim();
+	if(!url) return;
+
+	let data = new TextEncoder().encode(url);
+	const progressBar = document.getElementById('progressBar');
+	const progressContainer = document.getElementById('progressContainer');
+	progressContainer.style.display='block';
+	progressBar.style.width = '0%';
+
+	const startTime = new Date();
+
+	for(let i = 1; i <= depth; i++){
+		if(stopRequested){
+			resetUI();
+			return;
+		}
+		const key = await deriveKey(i);
+		data = await aesCtrEncrypt(data, key, i);
+		progressBar.style.width = ((i / depth) * 100).toFixed(2) + '%';
+		await new Promise(r => setTimeout(r, 0));
 	}
 
-	const finalUrl=window.location.href.split('#')[0]+'#'+toBase62(packPayload(depth,data));
-	document.getElementById("short").innerHTML=`<span onclick="copyUrl(this)">${finalUrl}</span>`;
-	progressBar.style.width='100%';
+	const finalUrl = window.location.href.split('#')[0] + '#' + toBase62(packPayload(depth, data));
+	document.getElementById("short").innerHTML = `<span onclick="copyUrl(this)">${finalUrl}</span>`;
+
+	const elapsed = ((new Date()) - startTime)/1000;
+	document.getElementById("details").textContent =
+		`Generated at: ${startTime.toLocaleString()} | Depth: ${depth} | Time elapsed: ${elapsed.toFixed(2)}s`;
+
+	progressBar.style.width = '100%';
 }
 
-async function decryptStep(hash){
-	let {depth,data} = unpackPayload(fromBase62Tagged(hash));
-	const key = await deriveKey(depth);
-	data = await aesCtrDecrypt(data,key,depth);
-	depth--;
-	if(depth === 0){
-		const finalUrl = new TextDecoder().decode(data);
-		window.location.hash = '';
-		window.location.replace(finalUrl);
-	} else {
-		const newHash = toBase62(packPayload(depth,data));
+document.querySelector('button[onclick*="stopRequested=true"]').onclick = () => { 
+	stopRequested = true; 
+	resetUI(); 
+};
+
+function layerColor(layer) {
+	const block = Math.floor(layer / 7) + 1;
+	const r = (block * 61) % 256;
+	const g = (block * 101) % 256;
+	const b = (block * 173) % 256;
+	return `rgb(${r},${g},${b})`;
+}
+
+async function decryptStep(hash) {
+	let {depth, data} = unpackPayload(fromBase62Tagged(hash));
+
+	const decryptUI = document.getElementById('decryptUI');
+	const circle = document.getElementById('decryptCircle').querySelector('circle');
+	const layersLeftEl = document.getElementById('layersLeft');
+
+	decryptUI.style.display = 'flex';
+
+	while (depth > 0) {
+		layersLeftEl.textContent = depth;
+		circle.setAttribute('stroke', layerColor(depth));
+		const key = await deriveKey(depth);
+		data = await aesCtrDecrypt(data, key, depth);
+		depth--;
+		const newHash = toBase62(packPayload(depth, data));
 		window.location.hash = newHash;
-		await new Promise(r => setTimeout(r, 100));
+		await new Promise(r => setTimeout(r, 50)); // Throttling navigation to prevent the browser from hanging. See https://crbug.com/1038223. Command line switch --disable-ipc-flooding-protection can be used to bypass the protection 
 		await decryptStep(newHash);
+		return;
 	}
+
+	const finalUrl = new TextDecoder().decode(data);
+	window.location.replace(finalUrl);
 }
 
 window.addEventListener('load',async ()=>{
-	const hash=window.location.hash.substring(1);
-	if(hash){ document.getElementById("ui").style.display='none'; await decryptStep(hash); }
-	else document.getElementById("ui").style.display='block';
+	const hash = window.location.hash.substring(1);
+	if(hash){
+		document.getElementById("ui").style.display='none';
+		await decryptStep(hash);
+	} else {
+		document.getElementById("ui").style.display='block';
+	}
 });
 </script>
 </body>
