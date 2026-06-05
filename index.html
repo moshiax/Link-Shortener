@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>Shady URL </title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap">
@@ -277,8 +278,8 @@
       <option value="aesToken">AES token</option>
       <option value="zeroWidth">Zero-width (fragile)</option>
       <option value="plainToken">Plain token</option>
-      <option value="leetMask">Leet mask</option>
-      <option value="caseMask">Case mask</option>
+      <option value="leetMask">Leet + Unicode mask</option>
+      <option value="caseMask">Case + Unicode mask</option>
     </select><br>
     <p id="modeInfo" style="font-size:12px; color:#aaa; margin-top:5px;"></p>
 
@@ -392,10 +393,24 @@
 	const PAYLOAD_START = '\u2060\u2061';
 	const PAYLOAD_END = '\u2061\u2060';
 	const INVISIBLE_DIGITS = ['\u200B', '\u200C', '\u200D', '\u2060'];
-	const CASE_MAGIC = [0x53, 0x55, 0x43, 0x32];
-	const LEET_MAGIC = [0x53, 0x55, 0x4c, 0x31];
+	const CASE_UNICODE_MAGIC = [0x53, 0x55, 0x43, 0x33];
+	const LEET_UNICODE_MAGIC = [0x53, 0x55, 0x4c, 0x32];
 	const LEET_DIGITS = { a: '4', e: '3', i: '1', o: '0', s: '5', t: '7' };
-	const LEET_LETTERS = Object.fromEntries(Object.entries(LEET_DIGITS).map(([letter, digit]) => [digit, letter]));
+	const CASE_HOMOGLYPHS = {
+		a: ['\u0430', '\u0251', '\u03b1'], b: ['\u042c', '\u0184'], c: ['\u0441', '\u03f2'], d: ['\u0501'], e: ['\u0435', '\u212e', '\u03b5'],
+		f: ['\u03dd'], g: ['\u0261'], h: ['\u04bb'], i: ['\u0456', '\u2170', '\u0131'], j: ['\u0458'], k: ['\u03ba', '\u043a'],
+		l: ['\u217c', '\u04cf'], m: ['\u043c'], n: ['\u0578'], o: ['\u043e', '\u03bf', '\u0585'], p: ['\u0440', '\u03c1'], q: ['\u051b'],
+		r: ['\u0433'], s: ['\u0455'], t: ['\u03c4'], u: ['\u03c5', '\u057d'], v: ['\u03bd', '\u0475'], w: ['\u051d'], x: ['\u0445', '\u03c7'],
+		y: ['\u0443', '\u03b3'], z: ['\u1d22']
+	};
+	const LEET_HOMOGLYPHS = {
+		a: ['\u0430', '\u0251', '\u03b1'], e: ['\u0435', '\u212e', '\u03b5'], i: ['\u0456', '\u2170', '\u0131'], o: ['\u043e', '\u03bf', '\u0585'],
+		s: ['\u0455'], t: ['\u03c4']
+	};
+	const CASE_SYMBOLS = buildSymbolTable(CASE_HOMOGLYPHS);
+	const LEET_SYMBOLS = buildSymbolTable(LEET_HOMOGLYPHS, LEET_DIGITS);
+	const CASE_SYMBOL_DECODER = buildSymbolDecoder(CASE_SYMBOLS);
+	const LEET_SYMBOL_DECODER = buildSymbolDecoder(LEET_SYMBOLS);
 
 	function normalizeTargetUrl(url) {
 		const parsedUrl = new URL(url.trim());
@@ -464,74 +479,175 @@
 		return normalizeTargetUrl(new TextDecoder().decode(bytes));
 	}
 
-	function packCasePayload(url) {
+	function packWordPayload(url, magic, modeName) {
 		const urlBytes = new TextEncoder().encode(normalizeTargetUrl(url));
 
 		if (urlBytes.length > 65535) {
-			throw new Error('URL is too long for case mask mode.');
+			throw new Error(`URL is too long for ${modeName} mode.`);
 		}
 
-		const payload = new Uint8Array(CASE_MAGIC.length + 2 + urlBytes.length);
-		payload.set(CASE_MAGIC, 0);
-		new DataView(payload.buffer).setUint16(CASE_MAGIC.length, urlBytes.length);
-		payload.set(urlBytes, CASE_MAGIC.length + 2);
+		const payload = new Uint8Array(magic.length + 2 + urlBytes.length);
+		payload.set(magic, 0);
+		new DataView(payload.buffer).setUint16(magic.length, urlBytes.length);
+		payload.set(urlBytes, magic.length + 2);
 		return payload;
 	}
 
-	function bytesToBits(bytes) {
-		return [...bytes]
-			.map(byte => byte.toString(2).padStart(8, '0'))
-			.join('');
+	function packCasePayload(url) {
+		return packWordPayload(url, CASE_UNICODE_MAGIC, 'case mask');
 	}
 
-	function bitsToBytes(bits) {
-		if (!bits.length || bits.length % 8 !== 0) {
+	function packLeetPayload(url) {
+		return packWordPayload(url, LEET_UNICODE_MAGIC, 'leet mask');
+	}
+
+	function addUniqueSymbol(symbols, symbol) {
+		if (symbol && [...symbol].length === 1 && !symbols.includes(symbol)) {
+			symbols.push(symbol);
+		}
+	}
+
+	function buildSymbolTable(homoglyphs, extraSymbols = {}) {
+		const table = {};
+
+		for (const letter of 'abcdefghijklmnopqrstuvwxyz') {
+			const symbols = [];
+
+			for (const symbol of [letter, ...(homoglyphs[letter] || [])]) {
+				addUniqueSymbol(symbols, symbol);
+				addUniqueSymbol(symbols, symbol.toUpperCase());
+			}
+
+			addUniqueSymbol(symbols, extraSymbols[letter]);
+
+			if (symbols.length > 1) {
+				table[letter] = symbols;
+			}
+		}
+
+		return table;
+	}
+
+	function buildSymbolDecoder(symbolTable) {
+		const decoder = {};
+
+		for (const [base, symbols] of Object.entries(symbolTable)) {
+			symbols.forEach((symbol, index) => {
+				decoder[symbol] = { base, index, radix: symbols.length };
+			});
+		}
+
+		return decoder;
+	}
+
+	function bytesToBigInt(bytes) {
+		let value = 0n;
+
+		for (const byte of bytes) {
+			value = (value << 8n) + BigInt(byte);
+		}
+
+		return value;
+	}
+
+	function bigIntToBytes(value) {
+		if (value <= 0n) {
+			return new Uint8Array();
+		}
+
+		let hex = value.toString(16);
+
+		if (hex.length % 2) {
+			hex = `0${hex}`;
+		}
+
+		return new Uint8Array(hex.match(/.{2}/g).map(byte => parseInt(byte, 16)));
+	}
+
+	function encodeNumberIntoWord(word, state, symbolTable) {
+		let encoded = '';
+
+		for (const char of word.toLowerCase()) {
+			const symbols = symbolTable[char];
+
+			if (!symbols) {
+				encoded += char;
+				continue;
+			}
+
+			let symbolIndex = 0;
+
+			if (state.value > 0n) {
+				const radix = BigInt(symbols.length);
+				symbolIndex = Number(state.value % radix);
+				state.value /= radix;
+			}
+
+			encoded += symbols[symbolIndex];
+		}
+
+		return encoded;
+	}
+
+	function decodeNumberFromHash(hash, symbolDecoder) {
+		let value = 0n;
+		let multiplier = 1n;
+		let hasPayloadChars = false;
+
+		for (const char of [...hash]) {
+			const symbol = symbolDecoder[char];
+
+			if (!symbol) {
+				continue;
+			}
+
+			value += BigInt(symbol.index) * multiplier;
+			multiplier *= BigInt(symbol.radix);
+			hasPayloadChars = true;
+		}
+
+		return hasPayloadChars ? value : null;
+	}
+
+	function decodePackedWordNumber(hash, magic, symbolDecoder) {
+		const value = decodeNumberFromHash(hash, symbolDecoder);
+
+		if (value === null) {
 			return null;
 		}
 
-		const bytes = new Uint8Array(bits.length / 8);
+		const payload = bigIntToBytes(value);
 
-		for (let i = 0; i < bits.length; i += 8) {
-			bytes[i / 8] = parseInt(bits.slice(i, i + 8), 2);
+		if (payload.length < magic.length + 2 || !magic.every((byte, index) => payload[index] === byte)) {
+			return null;
 		}
 
-		return bytes;
+		const urlLength = new DataView(payload.buffer, payload.byteOffset, payload.byteLength).getUint16(magic.length);
+		const totalLength = magic.length + 2 + urlLength;
+
+		if (payload.length < totalLength) {
+			return null;
+		}
+
+		return normalizeTargetUrl(new TextDecoder().decode(payload.slice(magic.length + 2, totalLength)));
 	}
 
 	function getCaseCarrierWord() {
 		return getRandomShadyWord().replace(/[^a-z]/gi, '').toLowerCase() || 'payload';
 	}
 
-	function encodeBitsIntoWord(word, bits, bitIndex) {
-		let encoded = '';
-
-		for (const char of word.toLowerCase()) {
-			if (bitIndex < bits.length && /[a-z]/.test(char)) {
-				encoded += bits[bitIndex] === '1' ? char.toUpperCase() : char;
-				bitIndex++;
-			} else {
-				encoded += char;
-			}
-		}
-
-		return { word: encoded, bitIndex };
-	}
-
 	function buildCaseMaskHash(url, randomString, fileExtension, numberOfWords) {
-		const bits = bytesToBits(packCasePayload(url));
+		const state = { value: bytesToBigInt(packCasePayload(url)) };
 		const requestedWordCount = getRequestedWordCount(numberOfWords);
 		const parts = [];
 		let encodedWordCount = 0;
-		let bitIndex = 0;
 
 		if (randomString && requestedWordCount > 0) {
 			parts.push(String(Math.floor(Math.random() * 100000000)));
 		}
 
-		while (bitIndex < bits.length || encodedWordCount < requestedWordCount) {
-			const encoded = encodeBitsIntoWord(getCaseCarrierWord(), bits, bitIndex);
-			parts.push(encoded.word);
-			bitIndex = encoded.bitIndex;
+		while (state.value > 0n || encodedWordCount < requestedWordCount) {
+			parts.push(encodeNumberIntoWord(getCaseCarrierWord(), state, CASE_SYMBOLS));
 			encodedWordCount++;
 		}
 
@@ -543,46 +659,7 @@
 	}
 
 	function decodeCaseMaskHash(hash) {
-		const bits = [...hash]
-			.filter(char => /[a-z]/i.test(char))
-			.map(char => char === char.toUpperCase() ? '1' : '0')
-			.join('');
-
-		const headerBitLength = (CASE_MAGIC.length + 2) * 8;
-
-		if (bits.length < headerBitLength) {
-			return null;
-		}
-
-		const header = bitsToBytes(bits.slice(0, headerBitLength));
-
-		if (!header || !CASE_MAGIC.every((byte, index) => header[index] === byte)) {
-			return null;
-		}
-
-		const urlLength = new DataView(header.buffer).getUint16(CASE_MAGIC.length);
-		const totalBitLength = headerBitLength + (urlLength * 8);
-
-		if (bits.length < totalBitLength) {
-			return null;
-		}
-
-		const urlBytes = bitsToBytes(bits.slice(headerBitLength, totalBitLength));
-
-		if (!urlBytes) {
-			return null;
-		}
-
-		return normalizeTargetUrl(new TextDecoder().decode(urlBytes));
-	}
-
-	function packLeetPayload(url) {
-		const urlBytes = new TextEncoder().encode(normalizeTargetUrl(url));
-		const payload = new Uint8Array(LEET_MAGIC.length + 2 + urlBytes.length);
-		payload.set(LEET_MAGIC, 0);
-		new DataView(payload.buffer).setUint16(LEET_MAGIC.length, urlBytes.length);
-		payload.set(urlBytes, LEET_MAGIC.length + 2);
-		return payload;
+		return decodePackedWordNumber(hash, CASE_UNICODE_MAGIC, CASE_SYMBOL_DECODER);
 	}
 
 	function getLeetCarrierWord() {
@@ -595,32 +672,14 @@
 		return /[aeiost]/.test(word) ? word : 'masturbation';
 	}
 
-	function encodeBitsIntoLeetWord(word, bits, bitIndex) {
-		let encoded = '';
-
-		for (const char of word.toLowerCase()) {
-			if (bitIndex < bits.length && LEET_DIGITS[char]) {
-				encoded += bits[bitIndex] === '1' ? LEET_DIGITS[char] : char;
-				bitIndex++;
-			} else {
-				encoded += char;
-			}
-		}
-
-		return { word: encoded, bitIndex };
-	}
-
 	function buildLeetMaskHash(url, randomString, fileExtension, numberOfWords) {
-		const bits = bytesToBits(packLeetPayload(url));
+		const state = { value: bytesToBigInt(packLeetPayload(url)) };
 		const requestedWordCount = getRequestedWordCount(numberOfWords);
 		const parts = [];
 		let encodedWordCount = 0;
-		let bitIndex = 0;
 
-		while (bitIndex < bits.length || encodedWordCount < requestedWordCount) {
-			const encoded = encodeBitsIntoLeetWord(getLeetCarrierWord(), bits, bitIndex);
-			parts.push(encoded.word);
-			bitIndex = encoded.bitIndex;
+		while (state.value > 0n || encodedWordCount < requestedWordCount) {
+			parts.push(encodeNumberIntoWord(getLeetCarrierWord(), state, LEET_SYMBOLS));
 			encodedWordCount++;
 		}
 
@@ -628,51 +687,25 @@
 	}
 
 	function decodeLeetMaskHash(hash) {
-		const bits = [...hash].map(char => {
-			const lowerChar = char.toLowerCase();
+		return decodePackedWordNumber(hash, LEET_UNICODE_MAGIC, LEET_SYMBOL_DECODER);
+	}
 
-			if (LEET_DIGITS[lowerChar]) {
-				return '0';
-			}
+	function getMaxWordCapacityBits(symbolTable) {
+		return Math.max(...Object.values(symbolTable).map(symbols => Math.log2(symbols.length)));
+	}
 
-			if (LEET_LETTERS[char]) {
-				return '1';
-			}
-
-			return '';
-		}).join('');
-		const headerBitLength = (LEET_MAGIC.length + 2) * 8;
-
-		if (bits.length < headerBitLength) {
-			return null;
-		}
-
-		const header = bitsToBytes(bits.slice(0, headerBitLength));
-
-		if (!header || !LEET_MAGIC.every((byte, index) => header[index] === byte)) {
-			return null;
-		}
-
-		const urlLength = new DataView(header.buffer).getUint16(LEET_MAGIC.length);
-		const totalBitLength = headerBitLength + (urlLength * 8);
-
-		if (bits.length < totalBitLength) {
-			return null;
-		}
-
-		const urlBytes = bitsToBytes(bits.slice(headerBitLength, totalBitLength));
-
-		if (!urlBytes) {
-			return null;
-		}
-
-		return normalizeTargetUrl(new TextDecoder().decode(urlBytes));
+	function getCaseMaskMinWords(url) {
+		const urlLength = new TextEncoder().encode(normalizeTargetUrl(url)).length;
+		const maxLettersPerWord = 13;
+		const maxBitsPerWord = maxLettersPerWord * getMaxWordCapacityBits(CASE_SYMBOLS);
+		return Math.ceil(((CASE_UNICODE_MAGIC.length + 2 + urlLength) * 8) / maxBitsPerWord);
 	}
 
 	function getLeetMaskMinWords(url) {
 		const urlLength = new TextEncoder().encode(normalizeTargetUrl(url)).length;
-		const maxEncodableCharsPerWord = 6;
-		return Math.ceil(((LEET_MAGIC.length + 2 + urlLength) * 8) / maxEncodableCharsPerWord);
+		const maxLeetCharsPerWord = 6;
+		const maxBitsPerWord = maxLeetCharsPerWord * getMaxWordCapacityBits(LEET_SYMBOLS);
+		return Math.ceil(((LEET_UNICODE_MAGIC.length + 2 + urlLength) * 8) / maxBitsPerWord);
 	}
 
 	function bytesToBase64Url(bytes) {
@@ -877,11 +910,6 @@
 		return null;
 	}
 
-	function getCaseMaskMinWords(url) {
-		const urlLength = new TextEncoder().encode(normalizeTargetUrl(url)).length;
-		const maxLettersPerWord = 13;
-		return Math.ceil(((CASE_MAGIC.length + 2 + urlLength) * 8) / maxLettersPerWord);
-	}
 
 	function updateModeInfo() {
 		const info = document.getElementById('modeInfo');
@@ -903,9 +931,9 @@
 			const packedChars = Math.ceil(urlBytes / 3) * 4;
 
 			if (mode === 'caseMask') {
-				info.textContent = `Case mask: theoretical minimum ${minCaseWords} shady words for this URL.`;
+				info.textContent = `Case + Unicode mask: theoretical minimum ${minCaseWords} shady words for this URL.`;
 			} else if (mode === 'leetMask') {
-				info.textContent = `Leet mask: theoretical minimum ${minLeetWords} shady words for this URL.`;
+				info.textContent = `Leet + Unicode mask: theoretical minimum ${minLeetWords} shady words for this URL.`;
 			} else if (mode === 'aesToken') {
 				info.textContent = `AES token: ${wordCount} shady words + encrypted token about ${aesChars} chars.`;
 			} else if (mode === 'chunkedAesToken') {
