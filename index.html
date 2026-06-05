@@ -327,7 +327,7 @@
 		}, 2300);
 	}
 
-	function getRandomShadyWord() {
+	function getRandomShadyWord(stylize = true) {
 		const shadyWords = [
 			"Theft", "CAPTCHA", "Keylogger", "VPN", "Cryptojacking", "Password", "Exploit", "Fraud", "Miner", "Pirate",
 			"Phishing", "Free_Movies", "Spyware", "Murder", "Trojan", "Voyeur", "Gay", "Girls", "Drug", "Prison",
@@ -350,6 +350,10 @@
 
 		const randomIndex = Math.floor(Math.random() * shadyWords.length);
 		let word = shadyWords[randomIndex];
+
+		if (!stylize) {
+			return word;
+		}
 
 		if (Math.random() < 0.15) {
 		  word = word.toUpperCase();
@@ -679,8 +683,12 @@
 		return normalizeTargetUrl(new TextDecoder().decode(payload.slice(magic.length + 2, totalLength)));
 	}
 
+	function getMaskCarrierWord() {
+		return getRandomShadyWord(false).replace(/[^a-z]/gi, '').toLowerCase() || 'payload';
+	}
+
 	function getCaseCarrierWord() {
-		return getRandomShadyWord().replace(/[^a-z]/gi, '').toLowerCase() || 'payload';
+		return getMaskCarrierWord();
 	}
 
 	function buildCaseMaskHash(url, randomString, fileExtension, numberOfWords) {
@@ -710,10 +718,10 @@
 	}
 
 	function getLeetCarrierWord() {
-		let word = getRandomShadyWord().toLowerCase().replace(/[^a-z]/g, '');
+		let word = getMaskCarrierWord();
 
 		for (let attempts = 0; attempts < 12 && !/[aeiost]/.test(word); attempts++) {
-			word = getRandomShadyWord().toLowerCase().replace(/[^a-z]/g, '');
+			word = getMaskCarrierWord();
 		}
 
 		return /[aeiost]/.test(word) ? word : 'masturbation';
