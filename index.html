@@ -397,18 +397,28 @@
 	const LEET_UNICODE_MAGIC = [0x53, 0x55, 0x4c, 0x32];
 	const LEET_DIGITS = { a: '4', e: '3', i: '1', o: '0', s: '5', t: '7' };
 	const CASE_HOMOGLYPHS = {
-		a: ['\u0430', '\u0251', '\u03b1'], b: ['\u042c', '\u0184'], c: ['\u0441', '\u03f2'], d: ['\u0501'], e: ['\u0435', '\u212e', '\u03b5'],
-		f: ['\u03dd'], g: ['\u0261'], h: ['\u04bb'], i: ['\u0456', '\u2170', '\u0131'], j: ['\u0458'], k: ['\u03ba', '\u043a'],
-		l: ['\u217c', '\u04cf'], m: ['\u043c'], n: ['\u0578'], o: ['\u043e', '\u03bf', '\u0585'], p: ['\u0440', '\u03c1'], q: ['\u051b'],
+		a: ['\u0430', '\u0251', '\u03b1'], b: ['\u042c', '\u0184'], c: ['\u0441', '\u03f2'], d: ['\u0501'], e: ['\u0435', '\u212e'],
+		f: ['\u03dd'], g: ['\u0261'], h: ['\u04ba'], i: ['\u0456', '\u2170', '\u0131'], j: ['\u0458'], k: ['\u043a'],
+		l: ['\u217c'], m: ['\u043c'], n: ['\u0578'], o: ['\u043e', '\u03bf', '\u0585'], p: ['\u0440', '\u03c1'], q: ['\u051b'],
 		r: ['\u0433'], s: ['\u0455'], t: ['\u03c4'], u: ['\u03c5', '\u057d'], v: ['\u03bd', '\u0475'], w: ['\u051d'], x: ['\u0445', '\u03c7'],
 		y: ['\u0443', '\u03b3'], z: ['\u1d22']
 	};
 	const LEET_HOMOGLYPHS = {
-		a: ['\u0430', '\u0251', '\u03b1'], e: ['\u0435', '\u212e', '\u03b5'], i: ['\u0456', '\u2170', '\u0131'], o: ['\u043e', '\u03bf', '\u0585'],
+		a: ['\u0430', '\u0251', '\u03b1'], e: ['\u0435', '\u212e'], i: ['\u0456', '\u2170', '\u0131'], o: ['\u043e', '\u03bf', '\u0585'],
 		s: ['\u0455'], t: ['\u03c4']
 	};
-	const CASE_SYMBOLS = buildSymbolTable(CASE_HOMOGLYPHS);
-	const LEET_SYMBOLS = buildSymbolTable(LEET_HOMOGLYPHS, LEET_DIGITS);
+	const CASE_UPPER_HOMOGLYPHS = {
+		a: ['\u0410', '\u0391'], c: ['\u0421', '\u03f9'], e: ['\u0415', '\u0395'],
+		i: ['\u0406', '\u2160'], j: ['\u0408'], k: ['\u039a', '\u041a'],
+		m: ['\u041c'], n: ['\u039d'], o: ['\u041e', '\u039f'], p: ['\u0420', '\u03a1'],
+		s: ['\u0405'], t: ['\u03a4'], x: ['\u0425', '\u03a7'], y: ['\u04ae']
+	};
+	const LEET_UPPER_HOMOGLYPHS = {
+		a: ['\u0410', '\u0391'], e: ['\u0415', '\u0395'], i: ['\u0406', '\u2160'], o: ['\u041e', '\u039f'],
+		s: ['\u0405'], t: ['\u03a4']
+	};
+	const CASE_SYMBOLS = buildSymbolTable(CASE_HOMOGLYPHS, {}, CASE_UPPER_HOMOGLYPHS);
+	const LEET_SYMBOLS = buildSymbolTable(LEET_HOMOGLYPHS, LEET_DIGITS, LEET_UPPER_HOMOGLYPHS);
 	const CASE_SYMBOL_DECODER = buildSymbolDecoder(CASE_SYMBOLS);
 	const LEET_SYMBOL_DECODER = buildSymbolDecoder(LEET_SYMBOLS);
 
@@ -507,7 +517,7 @@
 		}
 	}
 
-	function buildSymbolTable(homoglyphs, extraSymbols = {}) {
+	function buildSymbolTable(homoglyphs, extraSymbols = {}, uppercaseHomoglyphs = {}) {
 		const table = {};
 
 		for (const letter of 'abcdefghijklmnopqrstuvwxyz') {
@@ -515,7 +525,12 @@
 
 			for (const symbol of [letter, ...(homoglyphs[letter] || [])]) {
 				addUniqueSymbol(symbols, symbol);
-				addUniqueSymbol(symbols, symbol.toUpperCase());
+			}
+
+			addUniqueSymbol(symbols, letter.toUpperCase());
+
+			for (const symbol of uppercaseHomoglyphs[letter] || []) {
+				addUniqueSymbol(symbols, symbol);
 			}
 
 			addUniqueSymbol(symbols, extraSymbols[letter]);
@@ -526,6 +541,38 @@
 		}
 
 		return table;
+	}
+
+	function getUnicodeEscape(symbol) {
+		return [...symbol]
+			.map(char => `\\u${char.codePointAt(0).toString(16).padStart(4, '0')}`)
+			.join('');
+	}
+
+	function addUnicodeMapLines(lines, originalSymbol, replacements) {
+		for (const replacement of replacements || []) {
+			lines.push(`${originalSymbol} - ${getUnicodeEscape(replacement)} - ${replacement}`);
+		}
+	}
+
+	function formatUnicodeMap(homoglyphs, uppercaseHomoglyphs = {}, extraSymbols = {}) {
+		const lines = [];
+
+		for (const letter of 'abcdefghijklmnopqrstuvwxyz') {
+			addUnicodeMapLines(lines, letter, homoglyphs[letter]);
+			addUnicodeMapLines(lines, letter.toUpperCase(), uppercaseHomoglyphs[letter]);
+
+			if (extraSymbols[letter]) {
+				addUnicodeMapLines(lines, letter, [extraSymbols[letter]]);
+			}
+		}
+
+		return lines.join('\n');
+	}
+
+	function dumpUnicodeMap() {
+		console.log(`Case + Unicode map:\n${formatUnicodeMap(CASE_HOMOGLYPHS, CASE_UPPER_HOMOGLYPHS)}`);
+		console.log(`Leet + Unicode map:\n${formatUnicodeMap(LEET_HOMOGLYPHS, LEET_UPPER_HOMOGLYPHS, LEET_DIGITS)}`);
 	}
 
 	function buildSymbolDecoder(symbolTable) {
