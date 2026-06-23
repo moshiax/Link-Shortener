@@ -278,8 +278,7 @@
       <option value="aesToken">AES token</option>
       <option value="zeroWidth">Zero-width (fragile)</option>
       <option value="plainToken">Plain token</option>
-      <option value="leetMask">Leet + Unicode mask</option>
-      <option value="caseMask">Case + Unicode mask</option>
+      <option value="charmasc">Charmasc</option>
     </select><br>
     <p id="modeInfo" style="font-size:12px; color:#aaa; margin-top:5px;"></p>
 
@@ -397,8 +396,7 @@
 	const PAYLOAD_START = '\u2060\u2061';
 	const PAYLOAD_END = '\u2061\u2060';
 	const INVISIBLE_DIGITS = ['\u200B', '\u200C', '\u200D', '\u2060'];
-	const CASE_UNICODE_MAGIC = [0x53, 0x55, 0x43, 0x33];
-	const LEET_UNICODE_MAGIC = [0x53, 0x55, 0x4c, 0x32];
+	const CHARMASC_MAGIC = [0x43, 0x4d, 0x41, 0x31];
 	const LEET_DIGITS = { a: '4', e: '3', i: '1', o: '0', s: '5', t: '7' };
 	const CASE_HOMOGLYPHS = {
 		a: ['\u0430', '\u0251', '\u03b1'], b: ['\u042c', '\u0184'], c: ['\u0441', '\u03f2'], d: ['\u0501'], e: ['\u0435', '\u212e'],
@@ -407,24 +405,14 @@
 		r: ['\u0433'], s: ['\u0455'], t: ['\u03c4'], u: ['\u03c5', '\u057d'], v: ['\u03bd', '\u0475'], w: ['\u051d'], x: ['\u0445', '\u03c7'],
 		y: ['\u0443', '\u03b3'], z: ['\u1d22']
 	};
-	const LEET_HOMOGLYPHS = {
-		a: ['\u0430', '\u0251', '\u03b1'], e: ['\u0435', '\u212e'], i: ['\u0456', '\u2170', '\u0131'], o: ['\u043e', '\u03bf', '\u0585'],
-		s: ['\u0455'], t: ['\u03c4']
-	};
 	const CASE_UPPER_HOMOGLYPHS = {
 		a: ['\u0410', '\u0391'], c: ['\u0421', '\u03f9'], e: ['\u0415', '\u0395'],
 		i: ['\u0406', '\u2160'], j: ['\u0408'], k: ['\u039a', '\u041a'],
 		m: ['\u041c'], n: ['\u039d'], o: ['\u041e', '\u039f'], p: ['\u0420', '\u03a1'],
 		s: ['\u0405'], t: ['\u03a4'], x: ['\u0425', '\u03a7'], y: ['\u04ae']
 	};
-	const LEET_UPPER_HOMOGLYPHS = {
-		a: ['\u0410', '\u0391'], e: ['\u0415', '\u0395'], i: ['\u0406', '\u2160'], o: ['\u041e', '\u039f'],
-		s: ['\u0405'], t: ['\u03a4']
-	};
-	const CASE_SYMBOLS = buildSymbolTable(CASE_HOMOGLYPHS, {}, CASE_UPPER_HOMOGLYPHS);
-	const LEET_SYMBOLS = buildSymbolTable(LEET_HOMOGLYPHS, LEET_DIGITS, LEET_UPPER_HOMOGLYPHS);
-	const CASE_SYMBOL_DECODER = buildSymbolDecoder(CASE_SYMBOLS);
-	const LEET_SYMBOL_DECODER = buildSymbolDecoder(LEET_SYMBOLS);
+	const CHARMASC_SYMBOLS = buildSymbolTable(CASE_HOMOGLYPHS, LEET_DIGITS, CASE_UPPER_HOMOGLYPHS);
+	const CHARMASC_SYMBOL_DECODER = buildSymbolDecoder(CHARMASC_SYMBOLS);
 
 	function normalizeTargetUrl(url) {
 		const parsedUrl = new URL(url.trim());
@@ -507,12 +495,8 @@
 		return payload;
 	}
 
-	function packCasePayload(url) {
-		return packWordPayload(url, CASE_UNICODE_MAGIC, 'case mask');
-	}
-
-	function packLeetPayload(url) {
-		return packWordPayload(url, LEET_UNICODE_MAGIC, 'leet mask');
+	function packCharmascPayload(url) {
+		return packWordPayload(url, CHARMASC_MAGIC, 'charmasc');
 	}
 
 	function addUniqueSymbol(symbols, symbol) {
@@ -575,8 +559,7 @@
 	}
 
 	function dumpUnicodeMap() {
-		console.log(`Case + Unicode map:\n${formatUnicodeMap(CASE_HOMOGLYPHS, CASE_UPPER_HOMOGLYPHS)}`);
-		console.log(`Leet + Unicode map:\n${formatUnicodeMap(LEET_HOMOGLYPHS, LEET_UPPER_HOMOGLYPHS, LEET_DIGITS)}`);
+		console.log(`Charmasc map:\n${formatUnicodeMap(CASE_HOMOGLYPHS, CASE_UPPER_HOMOGLYPHS, LEET_DIGITS)}`);
 	}
 
 	function buildSymbolDecoder(symbolTable) {
@@ -687,80 +670,75 @@
 		return getRandomShadyWord(false).replace(/[^a-z]/gi, '').toLowerCase() || 'payload';
 	}
 
-	function getCaseCarrierWord() {
-		return getMaskCarrierWord();
+	function getCharmascCarrierWord() {
+		let bestWord = getMaskCarrierWord();
+		let bestCapacity = getWordCapacityBits(bestWord, CHARMASC_SYMBOLS);
+
+		for (let attempts = 0; attempts < 12; attempts++) {
+			const word = getMaskCarrierWord();
+			const capacity = getWordCapacityBits(word, CHARMASC_SYMBOLS);
+
+			if (capacity > bestCapacity) {
+				bestWord = word;
+				bestCapacity = capacity;
+			}
+		}
+
+		return bestCapacity > 0 ? bestWord : 'masturbation';
 	}
 
-	function buildCaseMaskHash(url, randomString, fileExtension, numberOfWords) {
-		const state = { value: bytesToBigInt(packCasePayload(url)) };
+	function getCharmascSafeRandomString() {
+		const safeDigits = '2689';
+		return Array.from({ length: 8 }, () => safeDigits[Math.floor(Math.random() * safeDigits.length)]).join('');
+	}
+
+	function getCharmascSafeFileExtension() {
+		const safeExtensions = ['exe', 'zip', 'rar', 'jpg', 'jpeg', 'doc', 'docx', 'pdf', 'img', 'bat', 'jar', 'apk', 'gz'];
+		return safeExtensions[Math.floor(Math.random() * safeExtensions.length)];
+	}
+
+	function buildCharmascHash(url, randomString, fileExtension, numberOfWords) {
+		const state = { value: bytesToBigInt(packCharmascPayload(url)) };
 		const requestedWordCount = getRequestedWordCount(numberOfWords);
 		const parts = [];
 		let encodedWordCount = 0;
 
 		if (randomString && requestedWordCount > 0) {
-			parts.push(String(Math.floor(Math.random() * 100000000)));
+			parts.push(getCharmascSafeRandomString());
 		}
 
 		while (state.value > 0n || encodedWordCount < requestedWordCount) {
-			parts.push(encodeNumberIntoWord(getCaseCarrierWord(), state, CASE_SYMBOLS));
+			parts.push(encodeNumberIntoWord(getCharmascCarrierWord(), state, CHARMASC_SYMBOLS));
 			encodedWordCount++;
 		}
 
 		if (fileExtension && requestedWordCount > 0) {
-			parts.push(getRandomFileExtension());
+			parts.push(getCharmascSafeFileExtension());
 		}
 
 		return parts.join('_');
 	}
 
-	function decodeCaseMaskHash(hash) {
-		return decodePackedWordNumber(hash, CASE_UNICODE_MAGIC, CASE_SYMBOL_DECODER);
+	function decodeCharmascHash(hash) {
+		return decodePackedWordNumber(hash, CHARMASC_MAGIC, CHARMASC_SYMBOL_DECODER);
 	}
 
-	function getLeetCarrierWord() {
-		let word = getMaskCarrierWord();
-
-		for (let attempts = 0; attempts < 12 && !/[aeiost]/.test(word); attempts++) {
-			word = getMaskCarrierWord();
-		}
-
-		return /[aeiost]/.test(word) ? word : 'masturbation';
-	}
-
-	function buildLeetMaskHash(url, randomString, fileExtension, numberOfWords) {
-		const state = { value: bytesToBigInt(packLeetPayload(url)) };
-		const requestedWordCount = getRequestedWordCount(numberOfWords);
-		const parts = [];
-		let encodedWordCount = 0;
-
-		while (state.value > 0n || encodedWordCount < requestedWordCount) {
-			parts.push(encodeNumberIntoWord(getLeetCarrierWord(), state, LEET_SYMBOLS));
-			encodedWordCount++;
-		}
-
-		return parts.join('_');
-	}
-
-	function decodeLeetMaskHash(hash) {
-		return decodePackedWordNumber(hash, LEET_UNICODE_MAGIC, LEET_SYMBOL_DECODER);
+	function getWordCapacityBits(word, symbolTable) {
+		return [...word.toLowerCase()].reduce((bits, char) => {
+			const symbols = symbolTable[char];
+			return bits + (symbols ? Math.log2(symbols.length) : 0);
+		}, 0);
 	}
 
 	function getMaxWordCapacityBits(symbolTable) {
 		return Math.max(...Object.values(symbolTable).map(symbols => Math.log2(symbols.length)));
 	}
 
-	function getCaseMaskMinWords(url) {
+	function getCharmascMinWords(url) {
 		const urlLength = new TextEncoder().encode(normalizeTargetUrl(url)).length;
 		const maxLettersPerWord = 13;
-		const maxBitsPerWord = maxLettersPerWord * getMaxWordCapacityBits(CASE_SYMBOLS);
-		return Math.ceil(((CASE_UNICODE_MAGIC.length + 2 + urlLength) * 8) / maxBitsPerWord);
-	}
-
-	function getLeetMaskMinWords(url) {
-		const urlLength = new TextEncoder().encode(normalizeTargetUrl(url)).length;
-		const maxLeetCharsPerWord = 6;
-		const maxBitsPerWord = maxLeetCharsPerWord * getMaxWordCapacityBits(LEET_SYMBOLS);
-		return Math.ceil(((LEET_UNICODE_MAGIC.length + 2 + urlLength) * 8) / maxBitsPerWord);
+		const maxBitsPerWord = maxLettersPerWord * getMaxWordCapacityBits(CHARMASC_SYMBOLS);
+		return Math.ceil(((CHARMASC_MAGIC.length + 2 + urlLength) * 8) / maxBitsPerWord);
 	}
 
 	function bytesToBase64Url(bytes) {
@@ -972,7 +950,7 @@
 		const url = document.getElementById('originalUrl').value.trim();
 
 		if (!url) {
-			info.textContent = 'Zero-width can be wordless; AES/packed use your word count; masks may need many words.';
+			info.textContent = 'Zero-width can be wordless; AES/packed use your word count; charmasc may need many words.';
 			return;
 		}
 
@@ -980,15 +958,12 @@
 			const normalizedUrl = normalizeTargetUrl(url);
 			const urlBytes = new TextEncoder().encode(normalizedUrl).length;
 			const wordCount = getRequestedWordCount(document.getElementById('numberOfWords').value);
-			const minCaseWords = getCaseMaskMinWords(normalizedUrl);
-			const minLeetWords = getLeetMaskMinWords(normalizedUrl);
+			const minCharmascWords = getCharmascMinWords(normalizedUrl);
 			const aesChars = Math.ceil((urlBytes + 28) / 3) * 4;
 			const packedChars = Math.ceil(urlBytes / 3) * 4;
 
-			if (mode === 'caseMask') {
-				info.textContent = `Case + Unicode mask: theoretical minimum ${minCaseWords} shady words for this URL.`;
-			} else if (mode === 'leetMask') {
-				info.textContent = `Leet + Unicode mask: theoretical minimum ${minLeetWords} shady words for this URL.`;
+			if (mode === 'charmasc') {
+				info.textContent = `Charmasc: theoretical minimum ${minCharmascWords} shady words for this URL.`;
 			} else if (mode === 'aesToken') {
 				info.textContent = `AES token: ${wordCount} shady words + encrypted token about ${aesChars} chars.`;
 			} else if (mode === 'chunkedAesToken') {
@@ -1016,7 +991,7 @@
 			console.warn('Hash is not URI encoded:', error);
 		}
 
-		for (const decoder of [decodeZeroWidthHash, decodePlainTokenHash, decodeAesTokenHash, decodeChunkedAesTokenHash, decodeCaseMaskHash, decodeLeetMaskHash]) {
+		for (const decoder of [decodeZeroWidthHash, decodePlainTokenHash, decodeAesTokenHash, decodeChunkedAesTokenHash, decodeCharmascHash]) {
 			try {
 				const targetUrl = await decoder(decodedHash);
 
@@ -1072,8 +1047,8 @@
 	}
 
 	async function buildHashForMode(mode, originalUrl, randomString, fileExtension, numberOfWords) {
-		if (mode === 'caseMask') {
-			return buildCaseMaskHash(originalUrl, randomString, fileExtension, numberOfWords);
+		if (mode === 'charmasc') {
+			return buildCharmascHash(originalUrl, randomString, fileExtension, numberOfWords);
 		}
 
 		if (mode === 'aesToken') {
@@ -1082,10 +1057,6 @@
 
 		if (mode === 'chunkedAesToken') {
 			return buildChunkedAesTokenHash(originalUrl, randomString, fileExtension, numberOfWords);
-		}
-
-		if (mode === 'leetMask') {
-			return buildLeetMaskHash(originalUrl, randomString, fileExtension, numberOfWords);
 		}
 
 		if (mode === 'plainToken') {
