@@ -2,22 +2,10 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shady URL Masker</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap">
 <style>
-body { font-family: Arial,sans-serif; text-align:center; padding:30px; background:#f9f9f9; }
-#ui { display:none; }
-input { width:250px; padding:6px; font-size:14px; border:1px solid #ccc; border-radius:3px; }
-button { padding:6px 12px; font-size:14px; margin-left:5px; cursor:pointer; background:#007BFF; color:#fff; border:none; border-radius:3px; }
-button:hover { background:#0056b3; }
-#stopBtn { background:#dc3545; }
-#stopBtn:hover { background:#a71d2a; }
-#short span { display:inline-block; margin-top:10px; padding:6px 10px; background:#28a745; color:#fff; border-radius:3px; cursor:pointer; }
-#short span:hover { background:#1e7e34; }
-#info { margin-top:8px; font-size:12px; color:#555; }
-#progressContainer { width:300px; height:20px; background:#eee; border-radius:10px; margin:20px auto; display:none; }
-#progressBar { height:100%; width:0%; background:#007BFF; border-radius:10px; transition: width 0.2s; }
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
-input[type=number] { -moz-appearance: textfield; }
 body {
   background-color: #000000;
   font-family: 'Roboto Mono', monospace;
@@ -30,6 +18,121 @@ body {
   min-height: 100vh;
   margin: 0;
 }
+
+h1 {
+  font-size: 2rem;
+  color: #FFFFFF;
+  margin-bottom: 30px;
+}
+
+#ui {
+  display: none;
+  width: min(560px, 92vw);
+}
+
+label {
+  display: block;
+  font-size: 1rem;
+  color: #B0B0B0;
+  margin: 14px auto 8px;
+  text-align: left;
+  width: 80%;
+}
+
+input, select, button {
+  background-color: #333333;
+  color: #E0E0E0;
+  border: 1px solid #444444;
+  padding: 10px;
+  font-size: 1rem;
+  width: 80%;
+  margin: 8px 0;
+  border-radius: 5px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border 0.3s ease, background-color 0.3s ease;
+}
+
+input:focus, select:focus {
+  border-color: #FF5722;
+}
+
+button {
+  background-color: #a13513;
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  font-size: 1.1rem;
+  margin-top: 12px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #E64A19;
+}
+
+#stopBtn {
+  background-color: #5f1f0c;
+}
+
+#stopBtn:hover {
+  background-color: #8b2d11;
+}
+
+#short {
+  max-width: 70vw;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+#short span {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: #333333;
+  color: #FF5722;
+  border: 1px solid #444444;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#short span:hover {
+  border-color: #FF5722;
+}
+
+#info, #details {
+  max-width: 420px;
+  width: 100%;
+  margin: 8px auto 0;
+  font-size: 12px;
+  color: #aaa;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+#progressContainer {
+  width: 80%;
+  height: 20px;
+  background: #333333;
+  border-radius: 10px;
+  margin: 20px auto;
+  display: none;
+  overflow: hidden;
+}
+
+#progressBar {
+  height: 100%;
+  width: 0%;
+  background: #FF5722;
+  border-radius: 10px;
+  transition: width 0.2s;
+}
+
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+input[type=number] { -moz-appearance: textfield; }
+
 #decryptCircle circle {
   transition: stroke 0.1s linear;
 }
@@ -51,14 +154,25 @@ body {
 </div>
 
 <div id="ui">
-  <input type="text" id="url" placeholder="URL">
-  <input type="number" id="depth" min="1" max="4294967295" placeholder="Recursion depth" style="width:auto; margin-left:5px;">
-  <button onclick="stopRequested=false; mask(Math.max(1, parseInt(document.getElementById('depth').value)||1));">Mask</button>
-  <button onclick="stopRequested=true;">Stop</button>
+  <h1>Link Masker</h1>
+  <label for="url">Enter the URL:</label>
+  <input type="text" id="url" placeholder="https://example.com">
+
+  <label for="depth">Recursion depth:</label>
+  <input type="number" id="depth" min="1" max="4294967295" value="1">
+
+  <label for="encodingMode">Encoding mode:</label>
+  <select id="encodingMode">
+    <option value="base62">Base62</option>
+    <option value="base131072">Base131072</option>
+  </select>
+
+  <button type="button" id="maskBtn">Mask</button>
+  <button type="button" id="stopBtn">Stop</button>
   <div id="progressContainer"><div id="progressBar"></div></div>
   <p id="short"></p>
   <p id="info"></p>
-  <p id="details" style="font-size:12px; color:#aaa; margin-top:5px;"></p>
+  <p id="details"></p>
 </div>
 
 <script>
@@ -74,19 +188,236 @@ function resetUI() {
 }
 
 const chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const BASE131072_PREFIX = '~';
+const BITS_PER_CHAR = 17;
+const BITS_PER_BYTE = 8;
+const BASE62_BYTES_PER_SYMBOL = Math.log2(chars.length) / BITS_PER_BYTE;
+const BASE131072_BYTES_PER_SYMBOL = BITS_PER_CHAR / BITS_PER_BYTE;
+const BASE131072_REPERTOIRE_COUNTS = {
+	17: 2 ** 17,
+	9: 2 ** 9,
+	1: 2
+};
+const BASE131072_PRIVATE_RANGES = [
+	[0xd800, 0xdfff],
+	[0xe000, 0xf8ff],
+	[0xf0000, 0xffffd],
+	[0x100000, 0x10fffd]
+];
+const lookupE = {};
+const lookupD = new Map();
+const BASE131072_PAIR_STRINGS = buildBase131072PairStrings();
+
+BASE131072_PAIR_STRINGS.forEach((pairString, r) => {
+	const numZBits = BITS_PER_CHAR - BITS_PER_BYTE * r;
+	lookupE[numZBits] = {};
+	let z = 0;
+
+	for (const pair of pairString.match(/../gu)) {
+		const [first, last] = [...pair].map(char => char.codePointAt(0));
+
+		for (let cp = first; cp < last; cp++) {
+			const chr = String.fromCodePoint(cp);
+			lookupE[numZBits][z] = chr;
+			lookupD.set(chr, [numZBits, z]);
+			z++;
+		}
+	}
+});
+
+function isPrivateCodePoint(cp){
+	return BASE131072_PRIVATE_RANGES.some(([from, to]) => cp >= from && cp <= to);
+}
+
+function isBase131072CodePoint(cp){
+	if (cp > 0x10ffff || isPrivateCodePoint(cp) || (cp & 0xfffe) === 0xfffe) {
+		return false;
+	}
+
+	const char = String.fromCodePoint(cp);
+	return /^\p{Assigned}$/u.test(char) && !/[\p{Mark}\p{Control}\p{Surrogate}\p{Separator}]/u.test(char);
+}
+
+function buildBase131072PairStrings(){
+	const remainingCounts = { ...BASE131072_REPERTOIRE_COUNTS };
+	const buckets = [[], [], []];
+	let bucketIndex = 0;
+	let rangeStart = null;
+	let previousCp = null;
+
+	function closeRange(){
+		if (rangeStart === null) return;
+		buckets[bucketIndex].push(String.fromCodePoint(rangeStart), String.fromCodePoint(previousCp + 1));
+		rangeStart = null;
+		previousCp = null;
+	}
+
+	for (let cp = 0; cp <= 0x10ffff && bucketIndex < buckets.length; cp++) {
+		if (!isBase131072CodePoint(cp)) {
+			closeRange();
+			continue;
+		}
+
+		if (rangeStart === null) {
+			rangeStart = cp;
+		} else if (cp !== previousCp + 1) {
+			closeRange();
+			rangeStart = cp;
+		}
+
+		previousCp = cp;
+		remainingCounts[BITS_PER_CHAR - BITS_PER_BYTE * bucketIndex]--;
+
+		if (remainingCounts[BITS_PER_CHAR - BITS_PER_BYTE * bucketIndex] === 0) {
+			closeRange();
+			bucketIndex++;
+		}
+	}
+
+	const missing = Object.entries(remainingCounts).filter(([, count]) => count > 0);
+	if (missing.length) {
+		throw new Error(`Base131072 alphabet is incomplete: ${missing.map(([bits, count]) => `${count} chars for ${bits}-bit repertoire`).join(', ')}.`);
+	}
+
+	return buckets.map(bucket => bucket.join(''));
+}
+
+function bytesToBigIntTagged(bytes){
+	return BigInt('0x' + [1,...bytes].map(b=>b.toString(16).padStart(2,'0')).join(''));
+}
+
+function bigIntToTaggedBytes(num){
+	let hex = num.toString(16);
+	if(hex.length % 2) hex = '0' + hex;
+	const decoded = new Uint8Array(hex.match(/.{1,2}/g).map(b=>parseInt(b,16)));
+	return decoded.slice(1);
+}
+
+function encodeBaseN(bytes, alphabet){
+	let num = bytesToBigIntTagged(bytes);
+	let encoded = '';
+	const base = BigInt([...alphabet].length);
+	const symbols = [...alphabet];
+
+	while(num > 0n){
+		encoded = symbols[Number(num % base)] + encoded;
+		num /= base;
+	}
+
+	return encoded || symbols[0];
+}
+
+function decodeBaseN(str, alphabet){
+	let num = 0n;
+	const symbols = [...alphabet];
+	const base = BigInt(symbols.length);
+	const indexes = new Map(symbols.map((char, index) => [char, index]));
+
+	for(const char of [...str]){
+		const index = indexes.get(char);
+		if(index === undefined) throw new Error('Invalid encoded payload symbol.');
+		num = num * base + BigInt(index);
+	}
+
+	return bigIntToTaggedBytes(num);
+}
 
 function toBase62(bytes){
-	let num = BigInt('0x' + [1,...bytes].map(b=>b.toString(16).padStart(2,'0')).join('')), s = '';
-	while(num > 0n){ s = chars[num % 62n] + s; num /= 62n; }
-	return s || chars[0];
+	return encodeBaseN(bytes, chars);
 }
 
 function fromBase62Tagged(str){
-	let num = 0n;
-	for(let c of str) num = num * 62n + BigInt(chars.indexOf(c));
-	let hex = num.toString(16); if(hex.length % 2) hex = '0' + hex;
-	const decoded = new Uint8Array(hex.match(/.{1,2}/g).map(b=>parseInt(b,16)));
-	return decoded.slice(1);
+	return decodeBaseN(str, chars);
+}
+
+function toBase131072(bytes){
+	let str = '';
+	let z = 0;
+	let numZBits = 0;
+
+	for (const byte of bytes) {
+		for (let j = BITS_PER_BYTE - 1; j >= 0; j--) {
+			const bit = (byte >> j) & 1;
+			z = (z << 1) + bit;
+			numZBits++;
+
+			if (numZBits === BITS_PER_CHAR) {
+				str += lookupE[numZBits][z];
+				z = 0;
+				numZBits = 0;
+			}
+		}
+	}
+
+	if (numZBits !== 0) {
+		while (!(numZBits in lookupE)) {
+			z = (z << 1) + 1;
+			numZBits++;
+		}
+
+		str += lookupE[numZBits][z];
+	}
+
+	return BASE131072_PREFIX + str;
+}
+
+function fromBase131072Tagged(str){
+	const encoded = str.startsWith(BASE131072_PREFIX) ? str.slice(BASE131072_PREFIX.length) : str;
+	const bytes = new Uint8Array(Math.floor(encoded.length * BITS_PER_CHAR / BITS_PER_BYTE));
+	let numBytes = 0;
+	let byte = 0;
+	let numByteBits = 0;
+	let shouldBeNoMoreChars = false;
+
+	for (const chr of encoded) {
+		if (shouldBeNoMoreChars) {
+			throw new Error('Secondary Base131072 character found before end of input.');
+		}
+
+		const pair = lookupD.get(chr);
+		if (!pair) {
+			throw new Error('Invalid Base131072 payload symbol.');
+		}
+
+		const [numZBits, z] = pair;
+		for (let j = numZBits - 1; j >= 0; j--) {
+			const bit = (z >> j) & 1;
+			byte = (byte << 1) + bit;
+			numByteBits++;
+
+			if (numByteBits === BITS_PER_BYTE) {
+				bytes[numBytes] = byte;
+				numBytes++;
+				byte = 0;
+				numByteBits = 0;
+			}
+		}
+
+		if (numZBits !== BITS_PER_CHAR) {
+			shouldBeNoMoreChars = true;
+		}
+	}
+
+	if (byte !== ((1 << numByteBits) - 1)) {
+		throw new Error('Base131072 padding mismatch.');
+	}
+
+	return new Uint8Array(bytes.buffer, 0, numBytes);
+}
+
+function encodePayload(bytes, mode){
+	return mode === 'base131072' ? toBase131072(bytes) : toBase62(bytes);
+}
+
+function decodePayload(hash){
+	const decodedHash = decodeURIComponent(hash);
+	return decodedHash.startsWith(BASE131072_PREFIX) ? fromBase131072Tagged(decodedHash) : fromBase62Tagged(decodedHash);
+}
+
+function getEncodingStats(mode){
+	const bytesPerSymbol = mode === 'base131072' ? BASE131072_BYTES_PER_SYMBOL : BASE62_BYTES_PER_SYMBOL;
+	const alphabetSize = mode === 'base131072' ? Object.values(BASE131072_REPERTOIRE_COUNTS).reduce((sum, count) => sum + count, 0) : chars.length;
+	return { alphabetSize, bytesPerSymbol };
 }
 
 function packPayload(depth,data){
@@ -152,20 +483,36 @@ async function mask(depth=1){
 		await new Promise(r => setTimeout(r, 0));
 	}
 
-	const finalUrl = window.location.href.split('#')[0] + '#' + toBase62(packPayload(depth, data));
+	const encodingMode = document.getElementById('encodingMode').value;
+	const encodedPayload = encodePayload(packPayload(depth, data), encodingMode);
+	const finalUrl = window.location.href.split('#')[0] + '#' + encodedPayload;
 	document.getElementById("short").innerHTML = `<span onclick="copyUrl(this)">${finalUrl}</span>`;
 
 	const elapsed = ((new Date()) - startTime)/1000;
+	const stats = getEncodingStats(encodingMode);
 	document.getElementById("details").textContent =
-		`Generated at: ${startTime.toLocaleString()} | Depth: ${depth} | Time elapsed: ${elapsed.toFixed(2)}s`;
+		`Generated at: ${startTime.toLocaleString()} | Depth: ${depth} | Mode: ${encodingMode} | Alphabet: ${stats.alphabetSize} chars | Density: ${stats.bytesPerSymbol.toFixed(2)} bytes/symbol | Time elapsed: ${elapsed.toFixed(2)}s`;
 
 	progressBar.style.width = '100%';
 }
 
-document.querySelector('button[onclick*="stopRequested=true"]').onclick = () => { 
-	stopRequested = true; 
-	resetUI(); 
-};
+document.getElementById('maskBtn').addEventListener('click', () => {
+	stopRequested = false;
+	mask(Math.max(1, parseInt(document.getElementById('depth').value, 10) || 1));
+});
+
+document.getElementById('stopBtn').addEventListener('click', () => {
+	stopRequested = true;
+	resetUI();
+});
+
+document.getElementById('encodingMode').addEventListener('change', () => {
+	const mode = document.getElementById('encodingMode').value;
+	const stats = getEncodingStats(mode);
+	document.getElementById('info').textContent =
+		`${mode === 'base131072' ? 'Base131072' : 'Base62'}: ${stats.alphabetSize} symbols, ${stats.bytesPerSymbol.toFixed(2)} payload bytes per visible symbol.`;
+});
+document.getElementById('encodingMode').dispatchEvent(new Event('change'));
 
 function layerColor(layer) {
 	const block = Math.floor(layer / 7) + 1;
@@ -176,7 +523,7 @@ function layerColor(layer) {
 }
 
 async function decryptStep(hash) {
-	let {depth, data} = unpackPayload(fromBase62Tagged(hash));
+	let {depth, data} = unpackPayload(decodePayload(hash));
 
 	const decryptUI = document.getElementById('decryptUI');
 	const circle = document.getElementById('decryptCircle').querySelector('circle');
@@ -190,7 +537,7 @@ async function decryptStep(hash) {
 		const key = await deriveKey(depth);
 		data = await aesCtrDecrypt(data, key, depth);
 		depth--;
-		const newHash = toBase62(packPayload(depth, data));
+		const newHash = hash.startsWith(BASE131072_PREFIX) ? toBase131072(packPayload(depth, data)) : toBase62(packPayload(depth, data));
 		window.location.hash = newHash;
 		await new Promise(r => setTimeout(r, 50)); // Throttling navigation to prevent the browser from hanging. See https://crbug.com/1038223. Command line switch --disable-ipc-flooding-protection can be used to bypass the protection 
 		await decryptStep(newHash);
