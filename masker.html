@@ -53,6 +53,32 @@ input, select, button {
   transition: border 0.3s ease, background-color 0.3s ease;
 }
 
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 42px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m3 6 5 5 5-5' fill='none' stroke='%23E0E0E0' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 14px 14px;
+  cursor: pointer;
+}
+
+textarea {
+  background-color: #333333;
+  color: #E0E0E0;
+  border: 1px solid #444444;
+  padding: 10px;
+  font: 0.95rem 'Roboto Mono', monospace;
+  width: 80%;
+  min-height: 220px;
+  margin: 8px 0;
+  border-radius: 5px;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
 input:focus, select:focus {
   border-color: #FF5722;
 }
@@ -155,8 +181,21 @@ input[type=number] { -moz-appearance: textfield; }
 
 <div id="ui">
   <h1>Link Masker</h1>
-  <label for="url">Enter the URL:</label>
-  <input type="text" id="url" placeholder="https://example.com">
+  <label for="targetType">Destination type:</label>
+  <select id="targetType">
+    <option value="url">URL</option>
+    <option value="blob">blob</option>
+  </select>
+
+  <div id="urlFields">
+    <label for="url">Enter the URL:</label>
+    <input type="text" id="url" placeholder="https://example.com">
+  </div>
+
+  <div id="blobFields" style="display:none">
+    <label for="blobContent">Blob content:</label>
+    <textarea id="blobContent" placeholder=""></textarea>
+  </div>
 
   <label for="depth">Recursion depth:</label>
   <input type="number" id="depth" min="1" max="4294967295" value="1">
@@ -461,10 +500,13 @@ async function mask(depth=1){
 	stopRequested = false;
 	resetUI();
 
-	const url = document.getElementById("url").value.trim();
-	if(!url) return;
+	const targetType = document.getElementById('targetType').value;
+	const target = targetType === 'blob'
+		? JSON.stringify({ kind: 'blob', content: document.getElementById('blobContent').value })
+		: document.getElementById('url').value.trim();
+	if(!target || (targetType === 'blob' && !document.getElementById('blobContent').value)) return;
 
-	let data = new TextEncoder().encode(url);
+	let data = new TextEncoder().encode(target);
 	const progressBar = document.getElementById('progressBar');
 	const progressContainer = document.getElementById('progressContainer');
 	progressContainer.style.display='block';
@@ -544,9 +586,25 @@ async function decryptStep(hash) {
 		return;
 	}
 
-	const finalUrl = new TextDecoder().decode(data);
-	window.location.replace(finalUrl);
+	const target = new TextDecoder().decode(data);
+	try {
+		const parsed = JSON.parse(target);
+		if (parsed && parsed.kind === 'blob' && typeof parsed.content === 'string') {
+			const blobUrl = URL.createObjectURL(new Blob([parsed.content], { type: 'text/html' }));
+			window.location.replace(blobUrl);
+			return;
+		}
+	} catch (error) {
+		// Existing masked URLs are stored as plain text.
+	}
+	window.location.replace(target);
 }
+
+document.getElementById('targetType').addEventListener('change', () => {
+	const isBlob = document.getElementById('targetType').value === 'blob';
+	document.getElementById('blobFields').style.display = isBlob ? 'block' : 'none';
+	document.getElementById('urlFields').style.display = isBlob ? 'none' : 'block';
+});
 
 window.addEventListener('load',async ()=>{
 	const hash = window.location.hash.substring(1);
